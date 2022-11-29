@@ -1,0 +1,2 @@
+Specification,NetworkFile,Epsilon,Delta,TimeTaken,Counterexample,FairRegion,FairRegionPercent,DebugCurRegion,JSMADimension,DeepimportanceDimension
+CEGFA,../../networks/german/rq1/fair/german_fair_exp2_3_50_fc.onnx,,,14.1842360496521,[],[],0,"[[0, 1, 2], [0, 1], [0, 1], [-1, 1, 2], [0, 1, 2], [0, 1], [0, 1], [-1, 1]]",,

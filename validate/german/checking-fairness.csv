@@ -1,0 +1,2 @@
+Specification,NetworkFile,Epsilon,Delta,TimeTaken,Counterexample,FairRegion,FairRegionPercent
+checking-fairness,../../networks/german/german_bias_3_15_fc.onnx,,,0.6768629550933838,,,

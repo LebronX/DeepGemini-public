@@ -1,0 +1,6 @@
+Specification,NetworkFile,Epsilon,Delta,TimeTaken,Counterexample,FairRegion,FairRegionPercent
+CEGFA,../../networks/german/german_bias_3_5_fc.onnx,,,0.07481908798217773,[],[],0
+CEGFA,../../networks/german/german_bias_3_5_fc.onnx,,,0.14073491096496582,[],[],0
+CEGFA,../../networks/german/german_bias_3_5_fc.onnx,,,0.20802998542785645,[],[],0
+CEGFA,../../networks/german/german_bias_3_5_fc.onnx,,,0.27995800971984863,[],[],0
+CEGFA,../../networks/german/german_bias_3_5_fc.onnx,,,0.3671729564666748,[],[],0

@@ -1,0 +1,2 @@
+Specification,NetworkFile,Epsilon,Delta,TimeTaken,Counterexample,FairRegion,FairRegionPercent,DebugCurRegion,JSMADimension,DeepimportanceDimension
+CEGFA,../../networks/german/german_bias_exp5_3_50_fc.onnx,,,11.19529390335083,[],[],0,"[[0, 1, 2], [0, 1], [0, 1], [0, 1, 2], [-1, 1, 2], [0, 1], [0, 1], [-1, 1]]",,

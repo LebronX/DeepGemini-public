@@ -1,0 +1,2 @@
+Specification,NetworkFile,Epsilon,Delta,TimeTaken,Counterexample,FairRegion,FairRegionPercent,DebugCurRegion,JSMADimension,DeepimportanceDimension
+CEGFA,../../networks/japanese/rq3/japanese_exp3_3_80_fc.onnx,,,40.98516011238098,[],"[[[0, 1], [0, 1], [0, 0.5], [-1, 1, -1], [0, -1, -1], [0, 0.5], [0, -1], [0, -1], [0, 0.5], [0, 1], [0, -1, -1], [0, 0.5], [0, 0.5]]]",0.0002314814814814815,"[[0, 1], [0, 1], [0, 0.5], [-1, 1, -1], [0, -1, -1], [0, 0.5], [0, -1], [0, -1], [0, 0.5], [0, 1], [0, -1, -1], [0, 0.5], [0, 0.5]]",,

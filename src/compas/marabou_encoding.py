@@ -1,0 +1,787 @@
+from maraboupy import Marabou
+from maraboupy import MarabouCore
+import sys
+
+sys.path.append("/Users/xiexuan/Downloads/Tool/Marabou")
+
+
+class marabouEncoding:
+    def __init__(self):
+        self.var = {}
+
+    def checkProperties(self, prop, networkFile):
+        # Reading DNN using our own version of reading onnx file
+        self.network_verified = Marabou.read_onnx_deepproperty(networkFile)
+        self.inputVars_verified = self.network_verified.inputVars  # 2*(19and19)
+        self.outputVars_verified = self.network_verified.outputVars  # 2*(3and3)
+
+        if prop[0] == "checking-fairness":
+            print("-----------checking fairness----------")
+            return self.checkFair()
+        elif prop[0] == "CEGFA":
+            print("-----------Counter-Example Guided Fairness Analysis----------")
+            return self.checkFairRegion(prop[1])
+
+    def checkFair(self):
+
+        # Assume for whole space
+
+        #####################
+        ### Pre-condition ###
+        #####################
+        for i in range(len(self.inputVars_verified)):
+            for j in range(len(self.inputVars_verified[0])):
+                self.network_verified.setLowerBound(self.inputVars_verified[i][j], 0)
+                self.network_verified.setUpperBound(self.inputVars_verified[i][j], 1)
+
+        print(len(self.inputVars_verified[0]))
+        # One-hot encoding constraint
+        for i in range(len(self.inputVars_verified)):
+            for j in range(len(self.inputVars_verified[0])):
+                # For 3 variables
+                # Original: (a = 1 and b = 0 and c = 0) or
+                #           (a = 0 and b = 1 and c = 0) or
+                #           (a = 0 and b = 0 and c = 1)
+                # Using a|(b&c) = (a|b)&(a|c)
+                # Finally: (a = 0 or b = 0) and
+                #          (a = 0 or c = 0) and
+                #          (b = 0 or c = 0) and
+                #          (a = 0 or b = 0 or c = 1) and
+                #          (a = 1 or b = 1 or c = 1)
+                if j == 2:
+                    # (a = 0 or b = 0) and
+                    disjunction_pre_02 = []
+                    eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+                    eq_pre_01.setScalar(0)
+                    disjunction_pre_02.append([eq_pre_01])
+                    eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 1])
+                    eq_pre_02.setScalar(0)
+                    disjunction_pre_02.append([eq_pre_02])
+                    self.network_verified.addDisjunctionConstraint(disjunction_pre_02)
+
+                    # (a = 0 or c = 0) and
+                    disjunction_pre_02 = []
+                    eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+                    eq_pre_01.setScalar(0)
+                    disjunction_pre_02.append([eq_pre_01])
+                    eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 2])
+                    eq_pre_02.setScalar(0)
+                    disjunction_pre_02.append([eq_pre_02])
+                    self.network_verified.addDisjunctionConstraint(disjunction_pre_02)
+
+                    # (b = 0 or c = 0) and
+                    disjunction_pre_02 = []
+                    eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_01.addAddend(1, self.inputVars_verified[i][j + 1])
+                    eq_pre_01.setScalar(0)
+                    disjunction_pre_02.append([eq_pre_01])
+                    eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 2])
+                    eq_pre_02.setScalar(0)
+                    disjunction_pre_02.append([eq_pre_02])
+                    self.network_verified.addDisjunctionConstraint(disjunction_pre_02)
+
+                    # (a = 0 or b = 0 or c = 1) and
+                    disjunction_pre_02 = []
+                    eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+                    eq_pre_01.setScalar(0)
+                    disjunction_pre_02.append([eq_pre_01])
+                    eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 1])
+                    eq_pre_02.setScalar(0)
+                    disjunction_pre_02.append([eq_pre_02])
+                    eq_pre_03 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_03.addAddend(1, self.inputVars_verified[i][j + 2])
+                    eq_pre_03.setScalar(1)
+                    disjunction_pre_02.append([eq_pre_03])
+                    self.network_verified.addDisjunctionConstraint(disjunction_pre_02)
+
+                    # (a = 1 or b = 1 or c = 1)
+                    disjunction_pre_02 = []
+                    eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+                    eq_pre_01.setScalar(1)
+                    disjunction_pre_02.append([eq_pre_01])
+                    eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 1])
+                    eq_pre_02.setScalar(1)
+                    disjunction_pre_02.append([eq_pre_02])
+                    eq_pre_03 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_03.addAddend(1, self.inputVars_verified[i][j + 2])
+                    eq_pre_03.setScalar(1)
+                    disjunction_pre_02.append([eq_pre_03])
+                    self.network_verified.addDisjunctionConstraint(disjunction_pre_02)
+                # For 2 variables
+                elif j in [0, 13, 15, 17]:
+                    disjunction_pre_02 = []
+                    eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+                    eq_pre_01.setScalar(0)
+                    disjunction_pre_02.append([eq_pre_01])
+                    eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 1])
+                    eq_pre_02.setScalar(0)
+                    disjunction_pre_02.append([eq_pre_02])
+                    self.network_verified.addDisjunctionConstraint(disjunction_pre_02)
+
+                    disjunction_pre_02 = []
+                    eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+                    eq_pre_01.setScalar(1)
+                    disjunction_pre_02.append([eq_pre_01])
+                    eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                    eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 1])
+                    eq_pre_02.setScalar(1)
+                    disjunction_pre_02.append([eq_pre_02])
+                    self.network_verified.addDisjunctionConstraint(disjunction_pre_02)
+
+        # Marabou constraint is conjunction of disjunction (CNF)
+        # Non-sensitive feature be the same
+        for j in range(0, len(self.inputVars_verified[0])):
+            if j in [5, 6, 7, 8, 9, 10]:
+                continue  # Race should be different
+            disjunction_pre_1 = []
+            eq_pre_1 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+            eq_pre_1.addAddend(1, self.inputVars_verified[0][j])
+            eq_pre_1.addAddend(-1, self.inputVars_verified[1][j])
+            eq_pre_1.setScalar(0)
+            disjunction_pre_1.append([eq_pre_1])
+            self.network_verified.addDisjunctionConstraint(disjunction_pre_1)
+
+        # Sensitive feature different, race should be different, one hot encoding
+        # Compare Asian with Native American at first
+        # 'Asian': [1, 0, 0, 0, 0, 0], 'Native American': [0, 1, 0, 0, 0, 0],
+        # 'Caucasian': [0, 0, 1, 0, 0, 0], 'African-American': [0, 0, 0, 1, 0, 0],
+        # 'Other': [0, 0, 0, 0, 1, 0], 'Hispanic': [0, 0, 0, 0, 0, 1]
+        disjunction_pre_21 = []
+        disjunction_pre_22 = []
+        disjunction_pre_23 = []
+        disjunction_pre_24 = []
+        disjunction_pre_25 = []
+        disjunction_pre_26 = []
+        sen_pre_11 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_11.addAddend(1, self.inputVars_verified[0][5])
+        sen_pre_11.setScalar(1)
+        sen_pre_12 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_12.addAddend(1, self.inputVars_verified[0][6])
+        sen_pre_12.setScalar(0)
+        sen_pre_13 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_13.addAddend(1, self.inputVars_verified[0][7])
+        sen_pre_13.setScalar(0)
+        sen_pre_14 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_14.addAddend(1, self.inputVars_verified[0][8])
+        sen_pre_14.setScalar(0)
+        sen_pre_15 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_15.addAddend(1, self.inputVars_verified[0][9])
+        sen_pre_15.setScalar(0)
+        sen_pre_16 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_16.addAddend(1, self.inputVars_verified[0][10])
+        sen_pre_16.setScalar(0)
+        disjunction_pre_21.append([sen_pre_11])
+        disjunction_pre_22.append([sen_pre_12])
+        disjunction_pre_23.append([sen_pre_13])
+        disjunction_pre_24.append([sen_pre_14])
+        disjunction_pre_25.append([sen_pre_15])
+        disjunction_pre_26.append([sen_pre_16])
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_21)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_22)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_23)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_24)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_25)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_26)
+
+        disjunction_pre_31 = []
+        disjunction_pre_32 = []
+        disjunction_pre_33 = []
+        disjunction_pre_34 = []
+        disjunction_pre_35 = []
+        disjunction_pre_36 = []
+        sen_pre_21 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_21.addAddend(1, self.inputVars_verified[1][5])
+        sen_pre_21.setScalar(0)
+        sen_pre_22 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_22.addAddend(1, self.inputVars_verified[1][6])
+        sen_pre_22.setScalar(1)
+        sen_pre_23 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_23.addAddend(1, self.inputVars_verified[1][7])
+        sen_pre_23.setScalar(0)
+        sen_pre_24 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_24.addAddend(1, self.inputVars_verified[1][8])
+        sen_pre_24.setScalar(0)
+        sen_pre_25 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_25.addAddend(1, self.inputVars_verified[1][9])
+        sen_pre_25.setScalar(0)
+        sen_pre_26 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_26.addAddend(1, self.inputVars_verified[1][10])
+        sen_pre_26.setScalar(0)
+        disjunction_pre_31.append([sen_pre_21])
+        disjunction_pre_32.append([sen_pre_22])
+        disjunction_pre_33.append([sen_pre_23])
+        disjunction_pre_34.append([sen_pre_24])
+        disjunction_pre_35.append([sen_pre_25])
+        disjunction_pre_36.append([sen_pre_26])
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_31)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_32)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_33)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_34)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_35)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_36)
+
+        #####################
+        ### Post-condition ##
+        #####################
+        # Leverage a|(b&c) = (a|b)&(a|c)
+
+        disjunction_post_1 = []
+        diff_post_1 = MarabouCore.Equation(MarabouCore.Equation.GE)
+        diff_post_1.addAddend(1, self.outputVars_verified[0][0])
+        diff_post_1.addAddend(-1, self.outputVars_verified[0][1])
+        diff_post_1.setScalar(
+            0
+        )  # XXX implementation problem, only support 0 (easy to find CE.) or 0.01 (might be hard to find CE.)
+        diff_post_2 = MarabouCore.Equation(MarabouCore.Equation.GE)
+        diff_post_2.addAddend(1, self.outputVars_verified[1][0])
+        diff_post_2.addAddend(-1, self.outputVars_verified[1][1])
+        diff_post_2.setScalar(0)
+        disjunction_post_1.append([diff_post_1])
+        disjunction_post_1.append([diff_post_2])
+
+        disjunction_post_2 = []
+        diff_post_3 = MarabouCore.Equation(MarabouCore.Equation.GE)
+        diff_post_3.addAddend(1, self.outputVars_verified[0][1])
+        diff_post_3.addAddend(-1, self.outputVars_verified[0][0])
+        diff_post_3.setScalar(0)
+        diff_post_4 = MarabouCore.Equation(MarabouCore.Equation.GE)
+        diff_post_4.addAddend(1, self.outputVars_verified[1][1])
+        diff_post_4.addAddend(-1, self.outputVars_verified[1][0])
+        diff_post_4.setScalar(0)
+        disjunction_post_2.append([diff_post_3])
+        disjunction_post_2.append([diff_post_4])
+
+        self.network_verified.addDisjunctionConstraint(disjunction_post_1)
+        self.network_verified.addDisjunctionConstraint(disjunction_post_2)
+
+        vals, stats = self.network_verified.solve()
+
+        return vals
+
+    def checkFairRegion(self, region):
+
+        # print(region)
+        for i in range(len(self.inputVars_verified)):
+            for j in range(len(self.inputVars_verified[0])):
+                if j == 11:  # quantitative
+                    self.network_verified.setLowerBound(
+                        self.inputVars_verified[i][j], region[3][0]
+                    )
+                    self.network_verified.setUpperBound(
+                        self.inputVars_verified[i][j], region[3][1]
+                    )
+                elif j == 12:
+                    self.network_verified.setLowerBound(
+                        self.inputVars_verified[i][j], region[4][0]
+                    )
+                    self.network_verified.setUpperBound(
+                        self.inputVars_verified[i][j], region[4][1]
+                    )
+                else:
+                    self.network_verified.setLowerBound(
+                        self.inputVars_verified[i][j], 0
+                    )
+                    self.network_verified.setUpperBound(
+                        self.inputVars_verified[i][j], 1
+                    )
+
+        ####################
+        ## Pre-condition ###
+        ####################
+        for i in range(len(self.inputVars_verified)):
+            for j, sub_region in zip([0, 2, 5, 11, 12, 13, 15], region):
+                if j == 2:  # Three variable
+                    if not (-1 in sub_region):
+                        # One-hot encoding constraint
+
+                        # For 3 variables
+                        # Original: (a = 1 and b = 0 and c = 0) or
+                        #           (a = 0 and b = 1 and c = 0) or
+                        #           (a = 0 and b = 0 and c = 1)
+                        # Using a|(b&c) = (a|b)&(a|c)
+                        # Finally: (a = 0 or b = 0) and
+                        #          (a = 0 or c = 0) and
+                        #          (b = 0 or c = 0) and
+                        #          (a = 0 or b = 0 or c = 1) and
+                        #          (a = 1 or b = 1 or c = 1)
+
+                        # (a = 0 or b = 0) and
+                        disjunction_onehot_three = []
+                        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+                        eq_pre_01.setScalar(0)
+                        disjunction_onehot_three.append([eq_pre_01])
+                        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 1])
+                        eq_pre_02.setScalar(0)
+                        disjunction_onehot_three.append([eq_pre_02])
+                        self.network_verified.addDisjunctionConstraint(
+                            disjunction_onehot_three
+                        )
+
+                        # (a = 0 or c = 0) and
+                        disjunction_onehot_three = []
+                        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+                        eq_pre_01.setScalar(0)
+                        disjunction_onehot_three.append([eq_pre_01])
+                        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 2])
+                        eq_pre_02.setScalar(0)
+                        disjunction_onehot_three.append([eq_pre_02])
+                        self.network_verified.addDisjunctionConstraint(
+                            disjunction_onehot_three
+                        )
+
+                        # (b = 0 or c = 0) and
+                        disjunction_onehot_three = []
+                        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_01.addAddend(1, self.inputVars_verified[i][j + 1])
+                        eq_pre_01.setScalar(0)
+                        disjunction_onehot_three.append([eq_pre_01])
+                        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 2])
+                        eq_pre_02.setScalar(0)
+                        disjunction_onehot_three.append([eq_pre_02])
+                        self.network_verified.addDisjunctionConstraint(
+                            disjunction_onehot_three
+                        )
+
+                        # (a = 0 or b = 0 or c = 1) and
+                        disjunction_onehot_three = []
+                        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+                        eq_pre_01.setScalar(0)
+                        disjunction_onehot_three.append([eq_pre_01])
+                        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 1])
+                        eq_pre_02.setScalar(0)
+                        disjunction_onehot_three.append([eq_pre_02])
+                        eq_pre_03 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_03.addAddend(1, self.inputVars_verified[i][j + 2])
+                        eq_pre_03.setScalar(1)
+                        disjunction_onehot_three.append([eq_pre_03])
+                        self.network_verified.addDisjunctionConstraint(
+                            disjunction_onehot_three
+                        )
+
+                        # (a = 1 or b = 1 or c = 1)
+                        disjunction_onehot_three = []
+                        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+                        eq_pre_01.setScalar(1)
+                        disjunction_onehot_three.append([eq_pre_01])
+                        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 1])
+                        eq_pre_02.setScalar(1)
+                        disjunction_onehot_three.append([eq_pre_02])
+                        eq_pre_03 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_03.addAddend(1, self.inputVars_verified[i][j + 2])
+                        eq_pre_03.setScalar(1)
+                        disjunction_onehot_three.append([eq_pre_03])
+                        self.network_verified.addDisjunctionConstraint(
+                            disjunction_onehot_three
+                        )
+                    elif sub_region.count(-1) == 1:
+                        digit1 = list(set([0, 1, 2]).intersection(set(sub_region)))[0]
+                        digit2 = list(set([0, 1, 2]).intersection(set(sub_region)))[1]
+                        remain_digit = list(set([0, 1, 2]) ^ set(sub_region))[
+                            0
+                        ]  # Third variable should be zero
+                        # One-hot encoding constraint
+                        disjunction_onehot_two = []
+                        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_01.addAddend(1, self.inputVars_verified[i][j + digit1])
+                        eq_pre_01.setScalar(0)
+                        disjunction_onehot_two.append([eq_pre_01])
+                        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_02.addAddend(1, self.inputVars_verified[i][j + digit2])
+                        eq_pre_02.setScalar(0)
+                        disjunction_onehot_two.append([eq_pre_02])
+                        self.network_verified.addDisjunctionConstraint(
+                            disjunction_onehot_two
+                        )
+
+                        disjunction_onehot_two = []
+                        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_01.addAddend(1, self.inputVars_verified[i][j + digit1])
+                        eq_pre_01.setScalar(1)
+                        disjunction_onehot_two.append([eq_pre_01])
+                        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_02.addAddend(1, self.inputVars_verified[i][j + digit2])
+                        eq_pre_02.setScalar(1)
+                        disjunction_onehot_two.append([eq_pre_02])
+                        self.network_verified.addDisjunctionConstraint(
+                            disjunction_onehot_two
+                        )
+
+                        disjunction_eq = []
+                        sen_pre_11 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        sen_pre_11.addAddend(
+                            1, self.inputVars_verified[i][j + remain_digit]
+                        )
+                        sen_pre_11.setScalar(0)
+                        disjunction_eq.append([sen_pre_11])
+                        self.network_verified.addDisjunctionConstraint(disjunction_eq)
+
+                    elif sub_region.count(-1) == 2:
+                        remain_digit1 = list(set([0, 1, 2]) ^ set(sub_region))[0]
+                        remain_digit2 = list(set([0, 1, 2]) ^ set(sub_region))[1]
+                        allow_digit = list(
+                            set([0, 1, 2]).intersection(set(sub_region))
+                        )[0]
+                        disjunction_eq = []
+                        sen_pre_11 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        sen_pre_11.addAddend(
+                            1, self.inputVars_verified[i][j + allow_digit]
+                        )
+                        sen_pre_11.setScalar(1)
+                        disjunction_eq.append([sen_pre_11])
+                        self.network_verified.addDisjunctionConstraint(disjunction_eq)
+                        disjunction_eq = []
+                        sen_pre_11 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        sen_pre_11.addAddend(
+                            1, self.inputVars_verified[i][j + remain_digit1]
+                        )
+                        sen_pre_11.setScalar(0)
+                        disjunction_eq.append([sen_pre_11])
+                        self.network_verified.addDisjunctionConstraint(disjunction_eq)
+                        disjunction_eq = []
+                        sen_pre_11 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        sen_pre_11.addAddend(
+                            1, self.inputVars_verified[i][j + remain_digit2]
+                        )
+                        sen_pre_11.setScalar(0)
+                        disjunction_eq.append([sen_pre_11])
+                        self.network_verified.addDisjunctionConstraint(disjunction_eq)
+
+                elif j in [0, 13, 15]:  # Two variable
+                    if not (-1 in sub_region):
+                        # One-hot encoding constraint
+                        disjunction_onehot_two = []
+                        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_01.addAddend(
+                            1, self.inputVars_verified[i][j + sub_region[0]]
+                        )
+                        eq_pre_01.setScalar(0)
+                        disjunction_onehot_two.append([eq_pre_01])
+                        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_02.addAddend(
+                            1, self.inputVars_verified[i][j + sub_region[1]]
+                        )
+                        eq_pre_02.setScalar(0)
+                        disjunction_onehot_two.append([eq_pre_02])
+                        self.network_verified.addDisjunctionConstraint(
+                            disjunction_onehot_two
+                        )
+
+                        disjunction_onehot_two = []
+                        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_01.addAddend(
+                            1, self.inputVars_verified[i][j + sub_region[0]]
+                        )
+                        eq_pre_01.setScalar(1)
+                        disjunction_onehot_two.append([eq_pre_01])
+                        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        eq_pre_02.addAddend(
+                            1, self.inputVars_verified[i][j + sub_region[1]]
+                        )
+                        eq_pre_02.setScalar(1)
+                        disjunction_onehot_two.append([eq_pre_02])
+                        self.network_verified.addDisjunctionConstraint(
+                            disjunction_onehot_two
+                        )
+
+                    elif -1 in sub_region:
+                        # print(j)
+                        # print(sub_region)
+                        # print("haha")
+                        allow_digit = list(set([0, 1]).intersection(set(sub_region)))[0]
+                        remain_digit = list(set([0, 1]) ^ set(sub_region))[0]
+                        disjunction_eq1 = []
+                        sen_pre_11 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        sen_pre_11.addAddend(
+                            1, self.inputVars_verified[i][j + allow_digit]
+                        )
+                        sen_pre_11.setScalar(1)
+                        disjunction_eq1.append([sen_pre_11])
+                        self.network_verified.addDisjunctionConstraint(disjunction_eq1)
+                        disjunction_eq2 = []
+                        sen_pre_12 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+                        sen_pre_12.addAddend(
+                            1, self.inputVars_verified[i][j + remain_digit]
+                        )
+                        sen_pre_12.setScalar(0)
+                        disjunction_eq2.append([sen_pre_12])
+                        self.network_verified.addDisjunctionConstraint(disjunction_eq2)
+
+        # Marabou constraint is conjunction of disjunction (CNF)
+        # Non-sensitive feature be the same
+        for j in range(0, len(self.inputVars_verified[0])):
+            if j in [5, 6, 7, 8, 9, 10]:
+                continue  # Race should be different
+            disjunction_pre_1 = []
+            eq_pre_1 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+            eq_pre_1.addAddend(1, self.inputVars_verified[0][j])
+            eq_pre_1.addAddend(-1, self.inputVars_verified[1][j])
+            eq_pre_1.setScalar(0)
+            disjunction_pre_1.append([eq_pre_1])
+            self.network_verified.addDisjunctionConstraint(disjunction_pre_1)
+
+        # Sensitive feature different, race should be different, one hot encoding
+        # Compare Asian with Native American at first
+        # 'Asian': [1, 0, 0, 0, 0, 0], 'Native American': [0, 1, 0, 0, 0, 0],
+        # 'Caucasian': [0, 0, 1, 0, 0, 0], 'African-American': [0, 0, 0, 1, 0, 0],
+        # 'Other': [0, 0, 0, 0, 1, 0], 'Hispanic': [0, 0, 0, 0, 0, 1]
+        disjunction_pre_21 = []
+        disjunction_pre_22 = []
+        disjunction_pre_23 = []
+        disjunction_pre_24 = []
+        disjunction_pre_25 = []
+        disjunction_pre_26 = []
+        sen_pre_11 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_11.addAddend(1, self.inputVars_verified[0][5])
+        sen_pre_11.setScalar(1)
+        sen_pre_12 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_12.addAddend(1, self.inputVars_verified[0][6])
+        sen_pre_12.setScalar(0)
+        sen_pre_13 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_13.addAddend(1, self.inputVars_verified[0][7])
+        sen_pre_13.setScalar(0)
+        sen_pre_14 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_14.addAddend(1, self.inputVars_verified[0][8])
+        sen_pre_14.setScalar(0)
+        sen_pre_15 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_15.addAddend(1, self.inputVars_verified[0][9])
+        sen_pre_15.setScalar(0)
+        sen_pre_16 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_16.addAddend(1, self.inputVars_verified[0][10])
+        sen_pre_16.setScalar(0)
+        disjunction_pre_21.append([sen_pre_11])
+        disjunction_pre_22.append([sen_pre_12])
+        disjunction_pre_23.append([sen_pre_13])
+        disjunction_pre_24.append([sen_pre_14])
+        disjunction_pre_25.append([sen_pre_15])
+        disjunction_pre_26.append([sen_pre_16])
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_21)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_22)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_23)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_24)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_25)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_26)
+
+        disjunction_pre_31 = []
+        disjunction_pre_32 = []
+        disjunction_pre_33 = []
+        disjunction_pre_34 = []
+        disjunction_pre_35 = []
+        disjunction_pre_36 = []
+        sen_pre_21 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_21.addAddend(1, self.inputVars_verified[1][5])
+        sen_pre_21.setScalar(0)
+        sen_pre_22 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_22.addAddend(1, self.inputVars_verified[1][6])
+        sen_pre_22.setScalar(1)
+        sen_pre_23 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_23.addAddend(1, self.inputVars_verified[1][7])
+        sen_pre_23.setScalar(0)
+        sen_pre_24 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_24.addAddend(1, self.inputVars_verified[1][8])
+        sen_pre_24.setScalar(0)
+        sen_pre_25 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_25.addAddend(1, self.inputVars_verified[1][9])
+        sen_pre_25.setScalar(0)
+        sen_pre_26 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_26.addAddend(1, self.inputVars_verified[1][10])
+        sen_pre_26.setScalar(0)
+        disjunction_pre_31.append([sen_pre_21])
+        disjunction_pre_32.append([sen_pre_22])
+        disjunction_pre_33.append([sen_pre_23])
+        disjunction_pre_34.append([sen_pre_24])
+        disjunction_pre_35.append([sen_pre_25])
+        disjunction_pre_36.append([sen_pre_26])
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_31)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_32)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_33)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_34)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_35)
+        self.network_verified.addDisjunctionConstraint(disjunction_pre_36)
+
+        #####################
+        ### Post-condition ##
+        #####################
+        # Leverage a|(b&c) = (a|b)&(a|c)
+        # (N1 = 0 and N2 = 1) or (N1 = 1 and N2 = 0)
+        # It becomes (N1 = 0 or N2 = 0) and (N1 = 1 or N2 = 1)
+        disjunction_post_1 = []
+        diff_post_1 = MarabouCore.Equation(MarabouCore.Equation.GE)
+        diff_post_1.addAddend(1, self.outputVars_verified[0][0])
+        diff_post_1.addAddend(-1, self.outputVars_verified[0][1])
+        diff_post_1.setScalar(
+            0
+        )  # XXX implementation problem, only support 0 (easy to find CE.) or 0.01 (might be hard to find CE.)
+        diff_post_2 = MarabouCore.Equation(MarabouCore.Equation.GE)
+        diff_post_2.addAddend(1, self.outputVars_verified[1][0])
+        diff_post_2.addAddend(-1, self.outputVars_verified[1][1])
+        diff_post_2.setScalar(0)
+        disjunction_post_1.append([diff_post_1])
+        disjunction_post_1.append([diff_post_2])
+
+        disjunction_post_2 = []
+        diff_post_3 = MarabouCore.Equation(MarabouCore.Equation.GE)
+        diff_post_3.addAddend(1, self.outputVars_verified[0][1])
+        diff_post_3.addAddend(-1, self.outputVars_verified[0][0])
+        diff_post_3.setScalar(0)
+        diff_post_4 = MarabouCore.Equation(MarabouCore.Equation.GE)
+        diff_post_4.addAddend(1, self.outputVars_verified[1][1])
+        diff_post_4.addAddend(-1, self.outputVars_verified[1][0])
+        diff_post_4.setScalar(0)
+        disjunction_post_2.append([diff_post_3])
+        disjunction_post_2.append([diff_post_4])
+
+        self.network_verified.addDisjunctionConstraint(disjunction_post_1)
+        self.network_verified.addDisjunctionConstraint(disjunction_post_2)
+
+        vals, stats = self.network_verified.solve()
+
+        return vals
+
+    def onehotThreeConstraint(self, i, j):
+        # One-hot encoding constraint
+
+        # For 3 variables
+        # Original: (a = 1 and b = 0 and c = 0) or
+        #           (a = 0 and b = 1 and c = 0) or
+        #           (a = 0 and b = 0 and c = 1)
+        # Using a|(b&c) = (a|b)&(a|c)
+        # Finally: (a = 0 or b = 0) and
+        #          (a = 0 or c = 0) and
+        #          (b = 0 or c = 0) and
+        #          (a = 0 or b = 0 or c = 1) and
+        #          (a = 1 or b = 1 or c = 1)
+
+        # (a = 0 or b = 0) and
+        disjunction_onehot_three = []
+        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+        eq_pre_01.setScalar(0)
+        disjunction_onehot_three.append([eq_pre_01])
+        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 1])
+        eq_pre_02.setScalar(0)
+        disjunction_onehot_three.append([eq_pre_02])
+        self.network_verified.addDisjunctionConstraint(disjunction_onehot_three)
+
+        # (a = 0 or c = 0) and
+        disjunction_onehot_three = []
+        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+        eq_pre_01.setScalar(0)
+        disjunction_onehot_three.append([eq_pre_01])
+        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 2])
+        eq_pre_02.setScalar(0)
+        disjunction_onehot_three.append([eq_pre_02])
+        self.network_verified.addDisjunctionConstraint(disjunction_onehot_three)
+
+        # (b = 0 or c = 0) and
+        disjunction_onehot_three = []
+        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_01.addAddend(1, self.inputVars_verified[i][j + 1])
+        eq_pre_01.setScalar(0)
+        disjunction_onehot_three.append([eq_pre_01])
+        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 2])
+        eq_pre_02.setScalar(0)
+        disjunction_onehot_three.append([eq_pre_02])
+        self.network_verified.addDisjunctionConstraint(disjunction_onehot_three)
+
+        # (a = 0 or b = 0 or c = 1) and
+        disjunction_onehot_three = []
+        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+        eq_pre_01.setScalar(0)
+        disjunction_onehot_three.append([eq_pre_01])
+        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 1])
+        eq_pre_02.setScalar(0)
+        disjunction_onehot_three.append([eq_pre_02])
+        eq_pre_03 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_03.addAddend(1, self.inputVars_verified[i][j + 2])
+        eq_pre_03.setScalar(1)
+        disjunction_onehot_three.append([eq_pre_03])
+        self.network_verified.addDisjunctionConstraint(disjunction_onehot_three)
+
+        # (a = 1 or b = 1 or c = 1)
+        disjunction_onehot_three = []
+        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_01.addAddend(1, self.inputVars_verified[i][j])
+        eq_pre_01.setScalar(1)
+        disjunction_onehot_three.append([eq_pre_01])
+        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_02.addAddend(1, self.inputVars_verified[i][j + 1])
+        eq_pre_02.setScalar(1)
+        disjunction_onehot_three.append([eq_pre_02])
+        eq_pre_03 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_03.addAddend(1, self.inputVars_verified[i][j + 2])
+        eq_pre_03.setScalar(1)
+        disjunction_onehot_three.append([eq_pre_03])
+        self.network_verified.addDisjunctionConstraint(disjunction_onehot_three)
+
+    def onehotTwoConstraint(self, i, k0, k1):
+        # One-hot encoding constraint
+        disjunction_onehot_two = []
+        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_01.addAddend(1, self.inputVars_verified[i][k0])
+        eq_pre_01.setScalar(0)
+        disjunction_onehot_two.append([eq_pre_01])
+        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_02.addAddend(1, self.inputVars_verified[i][k1])
+        eq_pre_02.setScalar(0)
+        disjunction_onehot_two.append([eq_pre_02])
+        self.network_verified.addDisjunctionConstraint(disjunction_onehot_two)
+
+        disjunction_onehot_two = []
+        eq_pre_01 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_01.addAddend(1, self.inputVars_verified[i][k0])
+        eq_pre_01.setScalar(1)
+        disjunction_onehot_two.append([eq_pre_01])
+        eq_pre_02 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        eq_pre_02.addAddend(1, self.inputVars_verified[i][k1])
+        eq_pre_02.setScalar(1)
+        disjunction_onehot_two.append([eq_pre_02])
+        self.network_verified.addDisjunctionConstraint(disjunction_onehot_two)
+
+    def eqConstraint(self, i, j, eq_val):
+        disjunction_eq = []
+        sen_pre_11 = MarabouCore.Equation(MarabouCore.Equation.EQ)
+        sen_pre_11.addAddend(1, self.inputVars_verified[i][j])
+        sen_pre_11.setScalar(eq_val)
+        self.network_verified.addDisjunctionConstraint(disjunction_eq)
+
+
+# For 3 otuput variables
+# Original: [N1 = 0 and (N2 = 1 or N2 = 2)] or
+#           [N1 = 1 and (N2 = 0 or N2 = 2)] or
+#           [N1 = 2 and (N2 = 0 or N2 = 1)]
+# Using a|(b&c) = (a|b)&(a|c)
+# Finally: (N1 = 0 or N1 = 1 or N2 = 0 or N2 = 1) and
+#          (N1 = 1 or N1 = 2 or N2 = 1 or N2 = 2) and
+#          (N1 = 0 or N1 = 2 or N2 = 0 or N2 = 2)
+
+# (N1 = 0 or N1 = 1 or N2 = 0 or N2 = 1) and
+# Leverage a|(b&c) = (a|b)&(a|c)
+# (N1 = 0 and N2 = 1) or (N1 = 1 and N2 = 0)
+# It becomes (N1 = 0 or N2 = 0) and (N1 = 1 or N2 = 1)

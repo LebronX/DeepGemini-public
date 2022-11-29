@@ -1,0 +1,2 @@
+Specification,NetworkFile,Epsilon,Delta,TimeTaken,Counterexample,FairRegion,FairRegionPercent,DebugCurRegion,JSMADimension
+checking-fairness,../../networks/japanese/japanese_3_8_fc.onnx,,,0.38948774337768555,,,,,
